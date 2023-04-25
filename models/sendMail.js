@@ -3,8 +3,11 @@ var nodemailer = require('nodemailer');
 const {xor} = require("mysql/lib/protocol/Auth");
 const crypto = require('crypto');
 const passwrodRestSaveHelper = require('./loginPasswordResetCheckTimeOut');
+const db = require("./dbhelper");
+const fs = require('fs');
+function sendMail() {
+}
 
-function sendMail() {}
 module.exports = sendMail;
 
 function generateResetToken() {
@@ -12,7 +15,7 @@ function generateResetToken() {
     return buffer.toString('hex');
 }
 
-async function sendEmail(email) {
+async function sendEmail(email,userName) {
     var smtpTransport = nodemailer.createTransport({
         host: 'owa.finupgroup.com',
         post: '587',
@@ -22,42 +25,67 @@ async function sendEmail(email) {
             pass: 'qqqqqqq1.'
         }
     });
-    var resetToken = "resetToken="+generateResetToken()+"&";
-    var resetUrl = "https://example.com/reset-password?resetToken="+resetToken+"&email="+email+"";
+    const htmlTemplate = fs.readFileSync('./transfer_email.html', 'utf8');
+    var token = generateResetToken();
+    var resetToken = "resetToken=" + token;
+    console.log("userName = "+userName);
+    var resetPasswordUrl = "https://example.com/reset-password?resetToken=" + resetToken + "&email=" + email + "";
+    const emailBody = htmlTemplate.replace('{{username}}', userName).replaceAll("{{resetLink}}", resetPasswordUrl);
+    console.log(emailBody)
     var mailOptions = {
         from: 'liujiawei@iqianjin.com',
         to: email,
         subject: 'Reset Password Notification',
-        text: "You are receiving this email because we received a password reset request for your account.\r\ncopy and paste the URL below into your web browser: "+resetUrl+ "If you did not request a password reset, no further action is required.\r\nRegards,\r\n E-Card"
+        html: emailBody
+        // text: "You are receiving this email because we received a password reset request for your account.\r\ncopy and paste the URL below into your web browser: " + resetUrl + "If you did not request a password reset, no further action is required.\r\nRegards,\r\n E-Card"
     };
-    console.log('发送邮件'+mailOptions);
+    console.log('发送邮件' + mailOptions);
 
 
     return new Promise((resolve, reject) => {
         smtpTransport.sendMail(mailOptions, function (error, response) {
-            console.log("sendMail.Promise -> "+error);
+            console.log("sendMail.Promise -> " + error);
             if (error) {
                 reject(error);
             } else {
-                resolve();
+                resolve(token);
             }
         });
     });
 };
 
-sendMail.insert = function (email,callback){
-    sendEmail(email).then((result) => {
-        console.log("这里为什么没有进来")
-        passwrodRestSaveHelper.insertEmailAndToken(email,function (error,status){
-            console.log("callbackr = "+status);
-            if (error){
-               callback( null,-1);
-           }else{
-               callback(null,1 );
-           }
-        });
-    }).catch((error) =>{
-        console.log("catch error = "+error);
-        callback(-1, null);
-    });
+sendMail.insert = function (email, callback) {
+
+    const selectUser = "select username from ecard_user_register where email = '" + email + "'";
+    db.query(
+        selectUser,
+        function (err, rows, fields) {
+            if (err) {
+                console.log(err);
+                callback(null, -1);
+            } else {
+                if (rows.length == 1) {
+                    console.log("rows.username = "+rows[0].username)
+                    sendEmail(email,rows[0].username).then((result) => {
+                        console.log("发送邮件以后:result = "+result)
+                        passwrodRestSaveHelper.insertEmailAndToken(email,result, function (error, status) {
+                            console.log("callbackr = " + status);
+                            if (error) {
+                                callback(null, -1);
+                            } else {
+                                callback(null, 1);
+                            }
+                        });
+                    }).catch((error) => {
+                        console.log("catch error = " + error);
+                        callback(-1, null);
+                    });
+                } else {
+                    callback(null, 2);
+                }
+            }
+        }
+    );
+
+
 }

@@ -200,15 +200,15 @@ app.post('/ecard/register', function (req, res) {
 app.post('/ecard/resetPassword', function (req, res) {
     var email = req.body.body.email;
     if (email == null) {
-        return callBackErrorAlertMessage(res,messageModel.email_1);
+        return callBackErrorAlertMessage(res, messageModel.email_1);
     }
     console.log(email.includes("@"))
     if (!email.includes("@")) {
-        return callBackErrorAlertMessage(res,messageModel.email_2);
+        return callBackErrorAlertMessage(res, messageModel.email_2);
     }
     var password = req.body.body.password;
     if (password == null) {
-        return callBackErrorAlertMessage(res,messageModel.password_empty);
+        return callBackErrorAlertMessage(res, messageModel.password_empty);
     }
     if (password.length < 8) {
         return callBackErrorAlertMessage(res, messageModel.register_call_back_2);
@@ -222,9 +222,9 @@ app.post('/ecard/resetPassword', function (req, res) {
         }
         var obj = new response();
         obj.code = status;
-        if (status == 0){
+        if (status == 0) {
             obj.msg = messageModel.Email_not_exist;
-        }else if (status == 1){
+        } else if (status == 1) {
             obj.msg = messageModel.password_reset_ssc;
         }
 
@@ -238,7 +238,7 @@ app.post('/ecard/resetPassword', function (req, res) {
 app.post('/ecard/userMainCardPage', function (req, res) {
     var email = req.body.body.email;
 
-    mainCard.selectUserCard(email,function (status, rows) {
+    mainCard.selectUserCard(email, function (status, rows) {
         if (status == -1) {
             return publicServerError(res);
         }
@@ -335,25 +335,25 @@ app.post('/ecard/orderUpload', function (req, res) {
  */
 app.post('/ecard/checkTokenTimeOut', function (req, res) {
     var email = req.body.body.email;
-    console.log("进来了吗"+email)
+    console.log("进来了吗" + email)
     if (email == null) {
-        return publicServerError(res,messageModel.email_1);
+        return publicServerError(res, messageModel.email_1);
     } else if (!email.includes("@")) {
-        return publicServerError(res,messageModel.email_2);
+        return publicServerError(res, messageModel.email_2);
     }
     var resetToken = req.body.body.resetToken;
 
     if (resetToken == null) {
-        return publicServerError(res,messageModel.email_1);
+        return publicServerError(res, messageModel.email_1);
     } else if (!email.includes("@")) {
-        return publicServerError(res,messageModel.email_2);
+        return publicServerError(res, messageModel.email_2);
     }
 
     loginPasswordResetCheckTimeOutHelper.selected(email, resetToken, function (error, status) {
         if (status == 10) {
             var obj = new response();
             obj.code = 10;
-            obj.msg = messageModel.token_has_expired;
+            obj.msg = messageModel.Email_not_exist;
             return res.send(JSON.stringify(obj));
         } else if (status == 11) {
             var obj = new response();
@@ -399,7 +399,7 @@ app.post('/ecard/confirmPassword', function (req, res) {
  */
 app.post('/ecard/sendPasswordEmail', function (req, res) {
     var mail = req.body.body.email;
-    console.log("mail = "+mail.includes("@"))
+    console.log("mail = " + mail.includes("@"))
     if (mail == null) {
         return callBackErrorAlertMessage(res, messageModel.email_1)
     } else if (!mail.includes("@")) {
@@ -407,7 +407,12 @@ app.post('/ecard/sendPasswordEmail', function (req, res) {
     }
 
     sendMailHelper.insert(mail, function (error, status) {
-        if (status == 1) {
+        if (status == 2) {
+            var obj = new response();
+            obj.code = 1;
+            obj.msg = messageModel.Email_not_exist;
+            return res.send(JSON.stringify(obj));
+        } else if (status == 1) {
             var obj = new response();
             obj.code = 1;
             obj.msg = messageModel.password_rest;

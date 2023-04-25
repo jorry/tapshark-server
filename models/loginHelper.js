@@ -51,7 +51,7 @@ loginHelper.updatePassword = function (email, new_password, callback) {
         if (rows.length == 0) {
             return callback(0, err);
         } else {
-            var selectRegister = "UPDATE ecard_user_login    SET password = '" + new_password + "'    WHERE username = '" + email + "';";
+            var selectRegister = "UPDATE ecard_user_register    SET password = '" + new_password + "'    WHERE email = '" + email + "';";
             console.log(selectRegister)
             db.query(selectRegister, function (err, rows, fields) {
                 console.log("err = " + err);

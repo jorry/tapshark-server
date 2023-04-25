@@ -13,23 +13,20 @@ function generateResetToken() {
     return buffer.toString('hex');
 }
 
-loginPasswordResetCheckTimeOut.insertEmailAndToken = function (email, callback) {
-    console.log('重置密码 token 储到数据库中');
+loginPasswordResetCheckTimeOut.insertEmailAndToken = function (email,token, callback) {
+    console.log('新增token');
 // 生成重置密码 token 和过期时间
-    const resetToken = generateResetToken();
+    const resetToken = token;
     const expirationTime = new Date(Date.now() + 60 * 60 * 1000); // 过期时间为当前时间后一小时
-    console.log('重置密码 token 储到数据库中' + expirationTime.getTime());
     // 将重置密码 token 和过期时间存储到数据库中
     const insertSql = "INSERT INTO reset_tokens SET email='" + email + "' ,token='" + resetToken + "', expiration_time='" + expirationTime.getTime() + "';";
     db.query(
         insertSql,
         function (err, results) {
-            console.log('重置密码 token 已存储到数据库中');
             if (err) {
                 console.log(err);
                 callback(null, -1);
             } else {
-                console.log('重置密码 token 已存储到数据库中');
                 // 发送重置密码邮件
                 callback(null, 1);
             }
