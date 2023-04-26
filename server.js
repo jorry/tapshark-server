@@ -162,11 +162,16 @@ app.post('/ecard/register', function (req, res) {
     var email = req.body.body.email;
     if (email == null) {
         return callBackErrorAlertMessage(res, messageModel.email_1);
+    }else if (email.includes('@')){
+        if (email == null) {
+            return callBackErrorAlertMessage(res, messageModel.email_2);
+        }
     }
 
     var password = req.body.body.password;
     var confirmPassword = req.body.confirmPassword;
-    if (password != confirmPassword) {
+    console.log(password+"")
+    if (password === confirmPassword) {
         return callBackErrorAlertMessage(res, messageModel.register_call_back_1);
     }
     if (password.length < 8) {

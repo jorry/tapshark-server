@@ -25,11 +25,11 @@ async function sendEmail(email,userName) {
             pass: 'qqqqqqq1.'
         }
     });
-    const htmlTemplate = fs.readFileSync('./transfer_email.html', 'utf8');
     var token = generateResetToken();
+    const htmlTemplate = fs.readFileSync('./transfer_email.html', 'utf8');
     var resetToken = "resetToken=" + token;
     console.log("userName = "+userName);
-    var resetPasswordUrl = "https://example.com/reset-password?resetToken=" + resetToken + "&email=" + email + "";
+    var resetPasswordUrl = "http://47.92.215.156/ECard/forget.html?resetToken=" + resetToken + "&email=" + email + "";
     const emailBody = htmlTemplate.replace('{{username}}', userName).replaceAll("{{resetLink}}", resetPasswordUrl);
     console.log(emailBody)
     var mailOptions = {

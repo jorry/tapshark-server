@@ -1,7 +1,7 @@
 var alertMessage = {
 
     email_1:'please input your email',//
-    email_2:'please include @.',//
+    email_2:'Please include @ in your email',//
     password:'please input your password',//
     login_call_back: "Email doesn't exist or Incorrect password",//
     name:'please enter user name',
