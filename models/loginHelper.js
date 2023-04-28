@@ -41,6 +41,22 @@ loginHelper.insertRecord = function (email, password, callback) {
 };
 
 
+loginHelper.checkEmail = function (email, callback) {
+
+    var checkEmal = "select * from ecard_user_register where email = '" + email + "';";
+    db.query(checkEmal, function (err, rows, fields) {
+        if (err) {
+            return callback(-1, err);
+        }
+        if (rows.length == 0) {
+            return callback(0, err);
+        } else {
+            return callback(1, err);
+        }
+    });
+};
+
+
 loginHelper.updatePassword = function (email, new_password, callback) {
 
     var checkEmal = "select * from ecard_user_register where email = '" + email + "';";

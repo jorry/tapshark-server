@@ -9,8 +9,12 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 var bodyParser = require('body-parser');
 var httptet = require('./models/httptet');
-var messageModel = require('./config/message');
+var checkAuth = require('./models/checkAuth');
+var checkAuthCookieArray = require('./models/checkAuthCookieArray');
 
+var cryptoUtilsHelper = require('./models/cryptoUtils');
+var messageModel = require('./config/message');
+const cookieParser = require('cookie-parser');
 var mainCard = require('./models/mainCard');
 var nfcHelper = require('./models/nfcHelper');
 var discountHelper = require('./models/discountCodeHelper');
@@ -19,17 +23,24 @@ var loginHelper = require('./models/loginHelper');
 var orderDetailUtils = require('./models/orderDetail');
 var dateHelper = require('./models/dateUtils');
 var sendMailHelper = require('./models/sendMail');
+let personalInfoHelper = require('./models/personalInfoHelper');
+
 var loginPasswordResetCheckTimeOutHelper = require('./models/loginPasswordResetCheckTimeOut');
 var ftpUtils = require('./models/sftpUtil');
 var cors = require('cors');
+const checkCookieObjArrayHelper = require("./models/checkAuthCookieArray");
+const secret = 'e4f4aef50468e375c36542a14c434c86';
+app.use(cookieParser(secret));
 app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({extended: true})); // for parsing application/x-www-form-urlencoded
 app.use(bodyParser.raw({
     type: 'binary/octet-stream',
     limit: '10mb'
 }));
-
 app.use(cors());
+
+const sessionId = crypto.randomBytes(16).toString('hex');
+app.use(cookieParser(sessionId));
 
 //发邮件方法，参数：channel：渠道iOS或android ,subject邮件标题, html邮件内容
 
@@ -67,7 +78,7 @@ app.post('/testPost', function (req, res) {
     return res.end(JSON.stringify(obj));
 });
 
-app.post("/ecard/upload/img", function (req, res) {
+app.post("/ecard/upload/img", checkAuth, function (req, res) {
     const form = new formidable.IncomingForm();
     form.keepExtensions = true; // 保留文件扩展名
     form.uploadDir = path.join(rootPath.path, '/src/temp'); // 临时存储路径
@@ -111,7 +122,7 @@ app.post("/ecard/upload/img", function (req, res) {
     });
 });
 
-app.post('/addUserOrder', function (req, res) {
+app.post('/addUserOrder', checkAuth, function (req, res) {
     var createDate = new Date().getTime();
     var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
     orderDetailUtils.insertOrder("ex@gmail.com", 1, "red tree", 4, "0", "http://card_template_url", "http://customized_card_url",
@@ -146,6 +157,18 @@ app.post('/ecard/userLogin', function (req, res) {
         if (error) {
             return publicServerError(res);
         }
+        if (status === 1) {
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(email);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuthCookieArray.checkCookieObjArray.push(session_id);
+        }
         var obj = new response();
         obj.code = status;
         obj.msg = status == 0 ? messageModel.login_call_back : "登录成功";
@@ -162,7 +185,7 @@ app.post('/ecard/register', function (req, res) {
     var email = req.body.body.email;
     if (email == null) {
         return callBackErrorAlertMessage(res, messageModel.email_1);
-    }else if (email.includes('@')){
+    } else if (email.includes('@')) {
         if (email == null) {
             return callBackErrorAlertMessage(res, messageModel.email_2);
         }
@@ -170,7 +193,7 @@ app.post('/ecard/register', function (req, res) {
 
     var password = req.body.body.password;
     var confirmPassword = req.body.confirmPassword;
-    console.log(password+"")
+    console.log(password + "")
     if (password === confirmPassword) {
         return callBackErrorAlertMessage(res, messageModel.register_call_back_1);
     }
@@ -240,7 +263,7 @@ app.post('/ecard/resetPassword', function (req, res) {
 /**
  * 用户主卡页
  */
-app.post('/ecard/userMainCardPage', function (req, res) {
+app.post('/ecard/userMainCardPage', checkAuth, function (req, res) {
     var email = req.body.body.email;
 
     mainCard.selectUserCard(email, function (status, rows) {
@@ -281,14 +304,43 @@ app.post('/ecard/checkDiscountCode', function (req, res) {
         return res.end(JSON.stringify(obj));
     });
 });
-app.get('/test', function (req, res) {
+
+app.get('/', function (req, res) {
+    console.log("app.get('/'")
+    req.send();
+});
+
+app.post('/test_get_coockie', checkAuth, function (req, res) {
+    // 在这里获取用户信息并返回
+    // const cookieValue = req.signedCookies['session_id'];
+    console.log('test_get_coockie+' + req.userData)
+    res.send(`Hello, ${req.userData}!`);
+});
+
+/**
+ * test
+ */
+app.post('/saveCookie', function (req, res) {
+
+    const cookieOptions = {
+        maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+        httpOnly: true, // 禁止客户端脚本访问 Cookie
+        signed: true, // 启用签名
+        sameSite: 'strict', // 防止跨站点请求伪造攻击
+        secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+    };
+    let session_id = cryptoUtilsHelper.encrypt(req.body.body.email);
+    res.cookie('session_id', session_id, cookieOptions);
+
+    console.log('session_id = '+session_id)
+    checkAuthCookieArray.checkCookieObjArray.push(session_id);
     var obj = new response();
     obj.code = 1;
     obj.msg = "ok";
     return res.send(JSON.stringify(obj));
 });
 
-app.post('/ecard/orderUpload', function (req, res) {
+app.post('/ecard/orderUpload', checkAuth, function (req, res) {
     var createDate = new Date().getTime();
     var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
 
@@ -318,6 +370,7 @@ app.post('/ecard/orderUpload', function (req, res) {
         full_address: req.body.body.shipping_address.full_address,
         address_line: req.body.body.shipping_address.address_line,
         city: req.body.body.shipping_address.city,
+        country: req.body.body.country,
         state: req.body.body.shipping_address.state,
         zip_code: req.body.body.shipping_address.zip_code,
         phone_number: req.body.body.shipping_address.phone_number,
@@ -402,7 +455,7 @@ app.post('/ecard/confirmPassword', function (req, res) {
 /**
  *
  */
-app.post('/ecard/sendPasswordEmail', function (req, res) {
+app.post('/ecard/sendPasswordEmail', checkAuth, function (req, res) {
     var mail = req.body.body.email;
     console.log("mail = " + mail.includes("@"))
     if (mail == null) {
@@ -427,17 +480,68 @@ app.post('/ecard/sendPasswordEmail', function (req, res) {
         }
     });
 });
+app.post('/ecard/selectCardPersonalInfo', checkAuth, function (req, res) {
+    const card_num = req.body.body.card_num;
+    personalInfoHelper.selectPersonalInfo(card_num, function (status, err, rows) {
+        if (err != null) {
+            return publicServerError(res)
+        }
+        if (status == 1) {
+            var obj = new response();
+            obj.code = 1;
+            obj.msg = "ok";
+            obj.body = rows[0];
+            return res.end(JSON.stringify(obj));
+
+        } else {
+            var obj = new response();
+            obj.code = status;
+            obj.msg = err;
+            return res.end(JSON.stringify(obj));
+        }
+
+    })
+});
+
+app.post('/ecard/addCardPersonalInfo', checkAuth, function (req, res) {
+    const personal = {
+        card_num: req.body.body.card_num,
+        photo_url: req.body.body.photo_url,
+        nick_name: req.body.body.nick_name,
+        first_name: req.body.body.first_name,
+        last_name: req.body.body.last_name,
+        company: req.body.body.company,
+        role: req.body.body.role,
+        job_title: req.body.body.job_title,
+        phone: req.body.body.phone,
+        email: req.body.body.email,
+        url: req.body.body.url,
+        address: req.body.body.address,
+        social_profile: req.body.body.social_profile,
+        instant_message: req.body.body.instant_message,
+        birthday: req.body.body.birthday,
+        date: req.body.body.date,
+        card_num: req.body.body.card_num
+    }
+
+    personalInfoHelper.addPersonalInfo(personal, function (status, err, rows) {
+        var obj = new response();
+        obj.code = status;
+        obj.msg = "";
+        return res.end(JSON.stringify(obj));
+    })
+});
 
 
 /**
  * NFC 扫码尽量，如果用户在已经注册过并且卡有信息,返回卡信息
  *             如果用户在已经注册过并且没有卡信息,返回卡信息
  */
-app.post('/ecard/nfc', function (req, res) {
+app.get('/ecard/nfc', function (req, res) {
     console.log('/ecard/nfc');
-    var userId = req.body.body.userId;
+    const userId = req.body.body.email;
     console.log(userId);
-    var cardId = req.body.body.cardId;
+    const cardId = req.body.body.card_num;
     console.log(cardId);
 
     var nfcStatusCode = 0;
@@ -459,17 +563,35 @@ app.post('/ecard/nfc', function (req, res) {
         } else if (status == 9) {
             nfcStatusCode = messageModel.NFC_empty_card_code;
             msg = messageModel.NFC_empty_card;
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(userId);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuth.checkCookieObjArray.push(session_id);
         } else if (status == 10) {
             nfcStatusCode = messageModel.NFC_display_card;
             msg = messageModel.NFC_display_card_code;
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(userId);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuth.checkCookieObjArray.push(session_id);
         }
         var obj = new response();
         obj.code = nfcStatusCode;
         obj.msg = msg;
         return res.end(JSON.stringify(obj));
     });
-
-    //1. 注册；2.新增卡。3卡信息
 
 });
 

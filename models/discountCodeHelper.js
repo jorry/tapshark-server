@@ -8,7 +8,7 @@ function discountCodeHelper() {
 }
 module.exports = discountCodeHelper;
 
-discountCodeHelper.discountCheck = function (email,discountCode,callback) {
+discountCodeHelper.selectPersonalInfo = function (email,discountCode,callback) {
 //status  = -1  没有注册;
     console.log('select discountCheck');
     var manager_add_user =  "select * from discountCode where email = '" + email + "' and discountCode = '"+discountCode+"';";

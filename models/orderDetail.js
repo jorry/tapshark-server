@@ -34,8 +34,8 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
         const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? AND buyCount = ? ', [orders.email, orders.payment_code, cards.buy_count]);
         if (result.length > 0 && result[0].status == 0) {
             console.log("支付码有效" + result[0])
-            const [addressResult] = await connection.query('INSERT INTO shipping_address(first_name,last_name,company,full_address,address_line,city,state,zip_code,phone_number,vat,email) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [address.first_name,address.last_name,address.company,address.full_address,address.address_line,address.city,address.state,address.zip_code,address.phone_number,address.vat,address.email]);
+            const [addressResult] = await connection.query('INSERT INTO shipping_address(first_name,last_name,company,full_address,address_line,city,state,zip_code,phone_number,vat,email,country) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [address.first_name,address.last_name,address.company,address.full_address,address.address_line,address.city,address.state,address.zip_code,address.phone_number,address.vat,address.email,address.country]);
 
             const addressId = addressResult.insertId;
             orders.shipping_address_id = addressId;
