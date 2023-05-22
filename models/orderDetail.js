@@ -30,12 +30,23 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
             callback(-100,"稍后重试");
             return;
         }
+        console.log('验证支付码:'+orders.email, orders.payment_code, cards.buy_count);
         //                                      '
         const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? AND buyCount = ? ', [orders.email, orders.payment_code, cards.buy_count]);
         if (result.length > 0 && result[0].status == 0) {
             console.log("支付码有效" + result[0])
-            const [addressResult] = await connection.query('INSERT INTO shipping_address(first_name,last_name,company,full_address,address_line,city,state,zip_code,phone_number,vat,email,country) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [address.first_name,address.last_name,address.company,address.full_address,address.address_line,address.city,address.state,address.zip_code,address.phone_number,address.vat,address.email,address.country]);
+            const [addressResult] = await connection.query('INSERT INTO shipping_address(first_name,last_name,company,full_address,address_line,city,state,zip_code,phone_number,vat,email,country) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
+                [address.first_name,
+                    address.last_name,
+                    address.company,
+                    address.full_address,
+                    address.address_line,
+                    address.city,
+                    address.state,
+                    address.zip_code,
+                    address.phone_number,
+                    address.vat,
+                    address.email,address.country]);
 
             const addressId = addressResult.insertId;
             orders.shipping_address_id = addressId;
@@ -67,14 +78,14 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
                 const qr_logo = cards.qr_logo;
                 const card_material_url = cards.card_material_url;
                 const card_num = ++card_n;
-
-                usersArray.push({company_logo, card_name, small_logo, qr_logo, card_material_url, card_num});
+                const font_color = cards.font_color;
+                usersArray.push({company_logo, card_name, small_logo, qr_logo, card_material_url, card_num,font_color});
             }
             console.log("此订单几个卡"+usersArray.length)
 
             for (const cardS of usersArray) {
-                const [result3] = await connection.query('INSERT INTO cards (company_logo,user_name,user_logo,qr_url,card_material_url,card_num) VALUES(?,?,?,?,?,?)',[ cardS.company_logo
-                    ,cardS.card_name,cardS.small_logo,cardS.qr_logo,cardS.card_material_url,cardS.card_num]);
+                const [result3] = await connection.query('INSERT INTO cards (company_logo,user_name,user_logo,qr_url,card_material_url,card_num,font_color) VALUES(?,?,?,?,?,?,?)',[ cardS.company_logo
+                    ,cardS.card_name,cardS.small_logo,cardS.qr_logo,cardS.card_material_url,cardS.card_num,cardS.font_color]);
 
 
                 console.log("----------------card-----------")
@@ -84,6 +95,7 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
                 console.log(cardS.qr_logo)
                 console.log(cardS.card_material_url)
                 console.log(cardS.card_num)
+                console.log(cardS.font_color)
                 console.log("----------------card---------end--")
 
 

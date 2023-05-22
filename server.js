@@ -37,8 +37,16 @@ app.use(bodyParser.raw({
     type: 'binary/octet-stream',
     limit: '10mb'
 }));
-app.use(cors());
-
+app.use(cors({
+      credentials: true
+}));
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'http://47.92.215.156'); // 替换为允许的客户端域名
+    res.header('Access-Control-Allow-Credentials', 'true'); // 允许携带凭据
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE'); // 允许的请求方法
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'); // 允许的请求头
+    next();
+  });
 const sessionId = crypto.randomBytes(16).toString('hex');
 app.use(cookieParser(sessionId));
 
@@ -49,6 +57,9 @@ var response = function () {
     this.msg;
     this.body;
 };
+
+
+
 
 function publicServerError(res) {
     var obj = new response();
@@ -78,70 +89,9 @@ app.post('/testPost', function (req, res) {
     return res.end(JSON.stringify(obj));
 });
 
-app.post("/ecard/upload/img", checkAuth, function (req, res) {
-    const form = new formidable.IncomingForm();
-    form.keepExtensions = true; // 保留文件扩展名
-    form.uploadDir = path.join(rootPath.path, '/src/temp'); // 临时存储路径
-    form.parse(req, function (err, fileds, files) {
-        if (err) {
-            throw err;
-        }
-        const file2 = files.file;
-        console.log('文件名:', file2.originalFilename);
-        console.log('文件大小:', file2.size);
-        const file = files.file;
-        const name = file.originalFilename;
-        const extensions = name.split('.').pop();
-        const fileName = `${extensions}`;
-        const filePath = file.filepath;
-
-        // 从临时存储路径中读取文件
-        const data = fs.readFileSync(filePath);
-        console.log('大小:', data.length);
-
-        let rootPath = path.resolve(__dirname, '../default'); //代码文件的根路径
-        // 将读取文件保存到新的位置
-        fs.writeFile(
-            path.join(rootPath, '/file/') + name,
-            data,
-            function (err) {
-                if (err) {
-                    return console.log(err);
-                }
-                // 删除临时文件
-                fs.unlink(filePath, function () {
-                });
-                // 返回文件服务器中该文件的url
-                var obj = new response();
-                obj.code = 1;
-                obj.msg = "上传完成";
-                obj.body = responseUploadImgUrlBody(`http://${req.host}/file/${name}`);
-                return res.end(JSON.stringify(obj));
-            }
-        );
-    });
-});
-
-app.post('/addUserOrder', checkAuth, function (req, res) {
-    var createDate = new Date().getTime();
-    var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
-    orderDetailUtils.insertOrder("ex@gmail.com", 1, "red tree", 4, "0", "http://card_template_url", "http://customized_card_url",
-        eventtime, "231aaqadsfad", function (status, error) {
-            var obj = new response();
-            if (error) {
-                obj.code = 0;
-                obj.msg = "插入失败";
-                return res.end(JSON.stringify(obj));
-            }
-
-            obj.code = 1;
-            obj.msg = "添加成功";
-            return res.end(JSON.stringify(obj));
-        });
-});
-
 
 app.post('/ecard/userLogin', function (req, res) {
+    console.log("abc-------abc---login");
     var email = req.body.body.email;
     if (email == null) {
         return callBackErrorAlertMessage(res, messageModel.email_1);
@@ -160,12 +110,13 @@ app.post('/ecard/userLogin', function (req, res) {
         if (status === 1) {
             const cookieOptions = {
                 maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-                httpOnly: true, // 禁止客户端脚本访问 Cookie
-                signed: true, // 启用签名
+                httpOnly: false, // 禁止客户端脚本访问 Cookie
+                signed: false, // 启用签名
                 sameSite: 'strict', // 防止跨站点请求伪造攻击
                 secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
             };
             let session_id = cryptoUtilsHelper.encrypt(email);
+            console.log('登录后:session_id = '+session_id);
             res.cookie('session_id', session_id, cookieOptions);
             checkAuthCookieArray.checkCookieObjArray.push(session_id);
         }
@@ -215,8 +166,18 @@ app.post('/ecard/register', function (req, res) {
             }
             return res.end(JSON.stringify(obj));
         }
+        const cookieOptions = {
+            maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+            httpOnly: false, // 禁止客户端脚本访问 Cookie
+            signed: false, // 启用签名
+            sameSite: 'strict', // 防止跨站点请求伪造攻击
+            secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+        };
+        let session_id = cryptoUtilsHelper.encrypt(email);
+        res.cookie('session_id', session_id, cookieOptions);
+        checkAuthCookieArray.checkCookieObjArray.push(session_id);
         obj.code = status;
-        obj.msg = messageModel.register_call_back_4;
+        obj.msg = messageModel.register_call_back_4 + session_id;
         return res.end(JSON.stringify(obj));
     });
 });
@@ -260,32 +221,6 @@ app.post('/ecard/resetPassword', function (req, res) {
     });
 });
 
-/**
- * 用户主卡页
- */
-app.post('/ecard/userMainCardPage', checkAuth, function (req, res) {
-    var email = req.body.body.email;
-
-    mainCard.selectUserCard(email, function (status, rows) {
-        if (status == -1) {
-            return publicServerError(res);
-        }
-        const list = rows.map(row => {
-            return {
-                company_logo: row.company_logo,
-                user_name: row.user_name,
-                user_logo: row.user_logo,
-                card_material_url: row.card_material_url,
-                user_name: row.card_num,
-            };
-        });
-        var obj = new response();
-        obj.code = 1;
-        obj.msg = "ok";
-        obj.body = list;
-        return res.end(JSON.stringify(obj));
-    });
-});
 
 
 /**
@@ -305,11 +240,16 @@ app.post('/ecard/checkDiscountCode', function (req, res) {
     });
 });
 
-app.get('/', function (req, res) {
+app.get('/abc', function (req, res) {
     console.log("app.get('/'")
-    req.send();
+    printCookie(req);
+    res.send();
 });
 
+function printCookie(req){
+    const cookieValue = req.signedCookies['session_id'];
+    console.log('print cookie = '+cryptoUtilsHelper.decryptCookie(cookieValue));
+}
 app.post('/test_get_coockie', checkAuth, function (req, res) {
     // 在这里获取用户信息并返回
     // const cookieValue = req.signedCookies['session_id'];
@@ -324,8 +264,8 @@ app.post('/saveCookie', function (req, res) {
 
     const cookieOptions = {
         maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-        httpOnly: true, // 禁止客户端脚本访问 Cookie
-        signed: true, // 启用签名
+        httpOnly: false, // 禁止客户端脚本访问 Cookie
+        signed: false, // 启用签名
         sameSite: 'strict', // 防止跨站点请求伪造攻击
         secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
     };
@@ -340,52 +280,6 @@ app.post('/saveCookie', function (req, res) {
     return res.send(JSON.stringify(obj));
 });
 
-app.post('/ecard/orderUpload', checkAuth, function (req, res) {
-    var createDate = new Date().getTime();
-    var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
-
-    const orders = {
-        email: req.body.body.orderInfo.email,
-        payment_code: req.body.body.orderInfo.purchase_code,
-        shipping_address_id: 0,
-        order_id: 0
-    }
-    console.log(orders.email)
-    const cards = {
-        card_name: req.body.body.cards.card_name,
-        company_logo: req.body.body.cards.company_logo,
-        small_logo: req.body.body.cards.small_logo,
-        card_material_url: req.body.body.cards.card_material_url,
-        buy_count: req.body.body.cards.buy_count,
-        qr_logo: req.body.body.cards.qr_logo,
-        card_id: 0,
-
-    }
-
-
-    const shipping_address = {
-        first_name: req.body.body.shipping_address.first_name,
-        last_name: req.body.body.shipping_address.last_name,
-        company: req.body.body.shipping_address.company,
-        full_address: req.body.body.shipping_address.full_address,
-        address_line: req.body.body.shipping_address.address_line,
-        city: req.body.body.shipping_address.city,
-        country: req.body.body.country,
-        state: req.body.body.shipping_address.state,
-        zip_code: req.body.body.shipping_address.zip_code,
-        phone_number: req.body.body.shipping_address.phone_number,
-        email: req.body.body.shipping_address.email,
-        vat: req.body.body.shipping_address.vat
-    }
-    orderDetailUtils.PromiseUtil(cards, orders, shipping_address, function (code, err) {
-        console.log("/ecard/orderUpload = code = " + code)
-        var obj = new response();
-        obj.code = code;
-        obj.msg = err;
-
-        return res.send(JSON.stringify(obj));
-    });
-});
 
 /*
   密码重置:先检测链接的有效性
@@ -455,7 +349,7 @@ app.post('/ecard/confirmPassword', function (req, res) {
 /**
  *
  */
-app.post('/ecard/sendPasswordEmail', checkAuth, function (req, res) {
+app.post('/ecard/sendPasswordEmail', function (req, res) {
     var mail = req.body.body.email;
     console.log("mail = " + mail.includes("@"))
     if (mail == null) {
@@ -480,12 +374,159 @@ app.post('/ecard/sendPasswordEmail', checkAuth, function (req, res) {
         }
     });
 });
-app.post('/ecard/selectCardPersonalInfo', checkAuth, function (req, res) {
+
+//----------以下接口要增加：checkAuth
+app.post("/ecard/upload/img", function (req, res) {
+    const form = new formidable.IncomingForm();
+    form.keepExtensions = true; // 保留文件扩展名
+    form.uploadDir = path.join(rootPath.path, '/src/temp'); // 临时存储路径
+    form.parse(req, function (err, fileds, files) {
+        if (err) {
+            throw err;
+        }
+        const file2 = files.file;
+        console.log('文件名:', file2.originalFilename);
+        console.log('文件大小:', file2.size);
+        const file = files.file;
+        const name = file.originalFilename;
+        const extensions = name.split('.').pop();
+        const fileName = `${extensions}`;
+        const filePath = file.filepath;
+
+        // 从临时存储路径中读取文件
+        const data = fs.readFileSync(filePath);
+        console.log('大小:', data.length);
+
+        let rootPath = path.resolve(__dirname, '../default'); //代码文件的根路径
+        // 将读取文件保存到新的位置
+        fs.writeFile(
+            path.join(rootPath, '/file/') + name,
+            data,
+            function (err) {
+                if (err) {
+                    return console.log(err);
+                }
+                // 删除临时文件
+                fs.unlink(filePath, function () {
+                });
+                // 返回文件服务器中该文件的url
+                var obj = new response();
+                obj.code = 1;
+                obj.msg = "上传完成";
+                obj.body = responseUploadImgUrlBody(`http://${req.host}/file/${name}`);
+                return res.end(JSON.stringify(obj));
+            }
+        );
+    });
+});
+
+app.post('/addUserOrder', function (req, res) {
+    var createDate = new Date().getTime();
+    var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
+    orderDetailUtils.insertOrder("ex@gmail.com", 1, "red tree", 4, "0", "http://card_template_url", "http://customized_card_url",
+        eventtime, "231aaqadsfad", function (status, error) {
+            var obj = new response();
+            if (error) {
+                obj.code = 0;
+                obj.msg = "插入失败";
+                return res.end(JSON.stringify(obj));
+            }
+
+            obj.code = 1;
+            obj.msg = "添加成功";
+            return res.end(JSON.stringify(obj));
+        });
+});
+
+
+
+/**
+ * 用户主卡页
+ */
+app.post('/ecard/userMainCardPage', function (req, res) {
+    var email = req.body.body.email;
+
+    mainCard.selectUserCard(email, function (status, rows) {
+        if (status == -1) {
+            return publicServerError(res);
+        }
+        const list = rows.map(row => {
+            console.log('----------'+row.user_name);
+            return {
+                
+                company_logo: row.company_logo,
+                user_name: row.user_name,
+                user_logo: row.user_logo,
+                card_material_url: row.card_material_url,
+                card_num: row.card_num,
+            };
+        });
+        var obj = new response();
+        obj.code = 1;
+        obj.msg = "ok";
+        obj.body = list;
+        return res.end(JSON.stringify(obj));
+    });
+});
+
+
+app.post('/ecard/orderUpload', function (req, res) {
+    
+    var createDate = new Date().getTime();
+    var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
+    const cookieValue = req.body.body.session_id;
+    console.log('cookieValue =  ?'+cookieValue);
+    console.log('读取:session_id = '+cookieValue);
+    const orders = {
+        email: cryptoUtilsHelper.decryptCookie(cookieValue),
+        payment_code: req.body.body.orderInfo.purchase_code,
+        shipping_address_id: 0,
+        order_id: 0
+    }
+    console.log('font_color = '+eq.body.body.cards.font_color)
+    const cards = {
+        card_name: req.body.body.cards.card_name,
+        company_logo: req.body.body.cards.company_logo,
+        small_logo: req.body.body.cards.small_logo,
+        card_material_url: req.body.body.cards.card_material_url,
+        buy_count: req.body.body.cards.buy_count,
+        qr_logo: req.body.body.cards.qr_logo,
+        font_color : req.body.body.cards.font_color,
+        card_id: 0,
+
+    }
+
+    console.log('req.body.body.country',req.body.body.shipping_address.country);
+    const shipping_address = {
+        first_name: req.body.body.shipping_address.first_name,
+        last_name: req.body.body.shipping_address.last_name,
+        company: req.body.body.shipping_address.company,
+        full_address: req.body.body.shipping_address.full_address,
+        address_line: req.body.body.shipping_address.address_line,
+        city: req.body.body.shipping_address.city,
+        country: req.body.body.shipping_address.country,
+        state: req.body.body.shipping_address.state,
+        zip_code: req.body.body.shipping_address.zip_code,
+        phone_number: req.body.body.shipping_address.phone_number,
+        email: req.body.body.shipping_address.email,
+        vat: req.body.body.shipping_address.vat
+    }
+    orderDetailUtils.PromiseUtil(cards, orders, shipping_address, function (code, err) {
+        console.log("/ecard/orderUpload = code = " + code)
+        var obj = new response();
+        obj.code = code;
+        obj.msg = err;
+
+        return res.send(JSON.stringify(obj));
+    });
+});
+app.post('/ecard/selectCardPersonalInfo', function (req, res) {
     const card_num = req.body.body.card_num;
     personalInfoHelper.selectPersonalInfo(card_num, function (status, err, rows) {
         if (err != null) {
             return publicServerError(res)
         }
+
         if (status == 1) {
             var obj = new response();
             obj.code = 1;
@@ -503,7 +544,7 @@ app.post('/ecard/selectCardPersonalInfo', checkAuth, function (req, res) {
     })
 });
 
-app.post('/ecard/addCardPersonalInfo', checkAuth, function (req, res) {
+app.post('/ecard/addCardPersonalInfo', function (req, res) {
     const personal = {
         card_num: req.body.body.card_num,
         photo_url: req.body.body.photo_url,
@@ -520,8 +561,8 @@ app.post('/ecard/addCardPersonalInfo', checkAuth, function (req, res) {
         social_profile: req.body.body.social_profile,
         instant_message: req.body.body.instant_message,
         birthday: req.body.body.birthday,
-        date: req.body.body.date,
-        card_num: req.body.body.card_num
+        theme: req.body.body.theme,
+        date: req.body.body.date
     }
 
     personalInfoHelper.addPersonalInfo(personal, function (status, err, rows) {
@@ -539,14 +580,15 @@ app.post('/ecard/addCardPersonalInfo', checkAuth, function (req, res) {
  */
 app.get('/ecard/nfc', function (req, res) {
     console.log('/ecard/nfc');
-    const userId = req.body.body.email;
-    console.log(userId);
-    const cardId = req.body.body.card_num;
-    console.log(cardId);
 
+
+    const email = req.query.email;
+    console.log(email);
+    const card_num = req.query.card_num;
+    console.log(card_num);
     var nfcStatusCode = 0;
     var msg;
-    nfcHelper.selectRegister(userId, cardId, function (status, callRow, error, message) {
+    nfcHelper.selectRegister(email, card_num, function (status, callRow, error, message) {
 
         console.log('nfcHelper.selectRegister = ' + message)
         if (error != null) {
@@ -563,29 +605,29 @@ app.get('/ecard/nfc', function (req, res) {
         } else if (status == 9) {
             nfcStatusCode = messageModel.NFC_empty_card_code;
             msg = messageModel.NFC_empty_card;
-            const cookieOptions = {
-                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-                httpOnly: true, // 禁止客户端脚本访问 Cookie
-                signed: true, // 启用签名
-                sameSite: 'strict', // 防止跨站点请求伪造攻击
-                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-            };
-            let session_id = cryptoUtilsHelper.encrypt(userId);
-            res.cookie('session_id', session_id, cookieOptions);
-            checkAuth.checkCookieObjArray.push(session_id);
+            // const cookieOptions = {
+            //     maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+            //     httpOnly: true, // 禁止客户端脚本访问 Cookie
+            //     signed: true, // 启用签名
+            //     sameSite: 'strict', // 防止跨站点请求伪造攻击
+            //     secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            // };
+            // let session_id = cryptoUtilsHelper.encrypt(email);
+            // res.cookie('session_id', session_id, cookieOptions);
+            // checkAuth.checkCookieObjArray.push(session_id);
         } else if (status == 10) {
             nfcStatusCode = messageModel.NFC_display_card;
             msg = messageModel.NFC_display_card_code;
-            const cookieOptions = {
-                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-                httpOnly: true, // 禁止客户端脚本访问 Cookie
-                signed: true, // 启用签名
-                sameSite: 'strict', // 防止跨站点请求伪造攻击
-                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-            };
-            let session_id = cryptoUtilsHelper.encrypt(userId);
-            res.cookie('session_id', session_id, cookieOptions);
-            checkAuth.checkCookieObjArray.push(session_id);
+            // const cookieOptions = {
+            //     maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+            //     httpOnly: true, // 禁止客户端脚本访问 Cookie
+            //     signed: true, // 启用签名
+            //     sameSite: 'strict', // 防止跨站点请求伪造攻击
+            //     secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            // };
+            // let session_id = cryptoUtilsHelper.encrypt(email);
+            // res.cookie('session_id', session_id, cookieOptions);
+            // checkAuth.checkCookieObjArray.push(session_id);
         }
         var obj = new response();
         obj.code = nfcStatusCode;
@@ -600,7 +642,7 @@ function toJSON(data, message, code) {
     return JSON.stringify(data, message, code);
 }
 
-var port = normalizePort(process.env.PORT_S || '30007');
+var port = normalizePort(process.env.PORT_S || '30008');
 http.createServer(app).listen(port);
 
 /**

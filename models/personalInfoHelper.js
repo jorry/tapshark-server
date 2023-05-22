@@ -31,10 +31,23 @@ personalInfoHelper.selectPersonalInfo = function (card_num, callback) {
 personalInfoHelper.addPersonalInfo = function (personalObj, callback) {
 //status  = -1  没有注册;
     console.log('select insertSql_personal_info');
-    const insertSql = "INSERT INTO personal_info SET photo_url='" + personalObj.photo_url + "' ,nick_name='" + personalObj.nick_name + "', first_name='" + personalObj.first_name+ "'" +
-        ", last_name='"+personalObj.last_name+"',company='"+personalObj.company+"',role='"+personalObj.role+"',job_title='"+personalObj.job_title+"',phone='"+personalObj.phone+"'," +
-        "email='"+personalObj.email+"',address='"+personalObj.address+"',birthday='"+personalObj.birthday+"',date='"+personalObj.date+"',social_profile='"+personalObj.social_profile+"',instant_message='"+personalObj.instant_message+"'" +
-        ",card_num='"+personalObj.card_num+"';";
+    const insertSql = "INSERT INTO personal_info SET photo_url='" + personalObj.photo_url + 
+    "' ,nick_name='" + personalObj.nick_name +
+     "', first_name='" + personalObj.first_name+ "'" +
+     ", last_name='"+personalObj.last_name+
+     "',company='"+personalObj.company+
+     "',role='"+personalObj.role+
+     "',job_title='"+personalObj.job_title+
+     "',phone='"+personalObj.phone+"'," +
+        "email='"+personalObj.email+
+        "',address='"+personalObj.address+
+        "',birthday='"+personalObj.birthday+
+        "',date='"+personalObj.date+
+        "',social_profile='"+personalObj.social_profile+
+        "',instant_message='"+personalObj.instant_message+"'" +
+        ",card_num='"+personalObj.card_num+"'" +
+        ",url='"+personalObj.url+
+        "',theme='"+personalObj.theme+"';";
 
     db.query(insertSql, function (err, rows, fields) {
         console.log(err);
