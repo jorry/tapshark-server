@@ -21,6 +21,20 @@ function query(sql) {
     });
 }
 
+orderDetailUtils.cardmanagerSelect = async function(callback){
+    var descGetCardId = "SELECT email,created_at,card_count,status,order_id FROM orders ;";
+    query(descGetCardId)
+        .then((results) => {
+            return results;
+        })
+        .then((results) => {
+            callback(20000, results);
+        })
+        .catch((error) => {
+            callback(-1, null);
+        });
+}
+
 
 orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback) {
 //    // var checkDiscountCode = "select * from discountCode where email = '" + orders.email + "' and discountCode = '" + orders.payment_code + "' and buyCount = " + cards.buy_count + ";";
@@ -52,8 +66,8 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
             orders.shipping_address_id = addressId;
 
             orders.order_id = uuidv4();
-            const [orderQueryResult] = await connection.query('INSERT INTO orders (order_id,email,shipping_address_id,payment_code) VALUES(?,?,?,?)', [orders.order_id,orders.email,orders.shipping_address_id,
-                orders.payment_code]);
+            const [orderQueryResult] = await connection.query('INSERT INTO orders (order_id,email,shipping_address_id,payment_code,card_count,status) VALUES(?,?,?,?,?,?)', [orders.order_id,orders.email,orders.shipping_address_id,
+                orders.payment_code,cards.buy_count,'no']);
             const orderId = orderQueryResult.insertId;
             console.log("-----------------------------------------------------");
             console.log("插入 订单表:"+JSON.stringify(orderQueryResult))
@@ -79,13 +93,15 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
                 const card_material_url = cards.card_material_url;
                 const card_num = ++card_n;
                 const font_color = cards.font_color;
-                usersArray.push({company_logo, card_name, small_logo, qr_logo, card_material_url, card_num,font_color});
+                const create_time = cards.creatTime;
+                const email = cards.email;
+                usersArray.push({company_logo, card_name, small_logo, qr_logo, card_material_url, card_num,font_color,create_time,email});
             }
             console.log("此订单几个卡"+usersArray.length)
 
             for (const cardS of usersArray) {
-                const [result3] = await connection.query('INSERT INTO cards (company_logo,user_name,user_logo,qr_url,card_material_url,card_num,font_color) VALUES(?,?,?,?,?,?,?)',[ cardS.company_logo
-                    ,cardS.card_name,cardS.small_logo,cardS.qr_logo,cardS.card_material_url,cardS.card_num,cardS.font_color]);
+                const [result3] = await connection.query('INSERT INTO cards (company_logo,user_name,user_logo,qr_url,card_material_url,card_num,font_color,create_time,email) VALUES(?,?,?,?,?,?,?,?,?)',[ cardS.company_logo
+                    ,cardS.card_name,cardS.small_logo,cardS.qr_logo,cardS.card_material_url,cardS.card_num,cardS.font_color,cardS.create_time,cardS.email]);
 
 
                 console.log("----------------card-----------")
@@ -96,6 +112,8 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
                 console.log(cardS.card_material_url)
                 console.log(cardS.card_num)
                 console.log(cardS.font_color)
+                console.log(cardS.email)
+
                 console.log("----------------card---------end--")
 
 
@@ -118,107 +136,6 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
 
         }
     })
-
-    // db.connect(function (connection) {
-    //     connection.beginTransaction((err) => {
-    //         if (err) {
-    //             throw err;
-    //         }
-    //         console.log(address.email)
-    //
-    //         var order_deetail = "INSERT INTO shipping_address SET first_name = '" + address.first_name + "',last_name = '" + address.last_name + "',company = '" + address.company + "'" +
-    //             ", full_address = '" + address.full_address + "',address_line = '" + address.address_line + "',city = '" + address.city + "',state = '" + address.state + "'" +
-    //             ", zip_code = '" + address.zip_code + "', phone_number = '" + address.phone_number + "', vat = '" + address.vat + "',email = '"+address.email+"';";
-    //         console.log(order_deetail);
-    //         connection.query(order_deetail, (qerr,vals,fields) => {
-    //             console.log(fields+"error = " + qerr+"   "+vals)
-    //             if (qerr) {
-    //                 return connection.rollback(() => {
-    //                     throw qerr;
-    //                 });
-    //             }
-    //
-    //             // const cardInserts = cards.map((card) => {
-    //             //     return new Promise((resolve, reject) => {
-    //             //         connection.query('INSERT INTO cards SET ?', card, (error, results, fields) => {
-    //             //             if (error) {
-    //             //                 return reject(error);
-    //             //             }
-    //             //
-    //             //             resolve();
-    //             //         });
-    //             //     });
-    //             // });
-    //
-    //             // Promise.all(cardInserts)
-    //             //     .then(() => {
-    //             //         connection.commit((error) => {
-    //             //             if (error) {
-    //             //                 return connection.rollback(() => {
-    //             //                     throw error;
-    //             //                 });
-    //             //             }
-    //             //
-    //             //             console.log('Transaction complete.');
-    //             //         });
-    //             //     }).catch((error) => {
-    //             //     connection.rollback(() => {
-    //             //         throw error
-    //             //     });
-    //             //
-    //             // })
-    //         })
-    //     })
-    // })
-    //
-    // console.log("orderDetailUtils.PromiseUtil.email:")
-    // var checkDiscountCode = "select * from discountCode where email = '" + orders.email + "' and discountCode = '" + orders.payment_code + "' and buyCount = " + cards.buy_count + ";";
-    //
-    // // const orderQueryResult = await db.query('INSERT INTO orders SET ?', order);
-    //
-    // //使用Promise执行两个SQL语句
-    // query(checkDiscountCode).then((results) => {
-    //     if (results.length == 0) {
-    //         callback(-1, "折扣码无效");
-    //         return;
-    //     }
-    //
-    //     var descGetCardId = "SELECT card_id FROM order_detail ORDER BY order_detail_id DESC LIMIT 1";
-    //     query(descGetCardId)
-    //         .then((results) => {
-    //             var cardId = 60000000000 + 1;
-    //             console.log("results" + results.length)
-    //             if (results.length == 1) {
-    //                 cardId = results[0].card_id + 1;
-    //             }
-    //             orders.card_id = cardId;
-    //             var order_deetail = "INSERT INTO discountCode SET email = '" + orders.email + "',discountCode = '" + orders.purchase_code + "',buyCount = " + cards.buy_count + ";";
-    //             query(order_deetail).then((results) => {
-    //                 console.log("results  discountCode" + results.insertId)
-    //                 // var order_deetail = "INSERT INTO shipping_address SET first_name = '" + address.first_name + "',last_name = '" + address.last_name + "',company = " + address.company + "" +
-    //                 //     ", full_address = '" + address.full_address + "',address_line = '" + address.address_line + "',city = '" + address.city + "',state = '" + address.state + "'" +
-    //                 //     ", zip_code = '" + address.zip_code + "', phone_number = '" + address.phone_number + "', vat = '" + address.vat + "';";
-    //                 var order_deetail = "INSERT INTO shipping_address SET first_name = '" + address.first_name + "',last_name = '" + address.last_name + "',company = '" + address.company + "'" +
-    //                                 ", full_address = '" + address.full_address + "',address_line = '" + address.address_line + "',city = '" + address.city + "',state = '" + address.state + "'" +
-    //                                 ", zip_code = '" + address.zip_code + "', phone_number = '" + address.phone_number + "', vat = '" + address.vat + "',email = '"+address.email+"';";
-    //
-    //                 query(order_deetail).then((results) => {
-    //                     console.log("results  discountCode" + results.insertId)
-    //                     query('').then((results) => {
-    //
-    //                     });
-    //                 });
-    //             });
-    //         })
-    //         .then((results) => {
-    //             console.log("then =   ");
-    //             callback(1, null);
-    //         })
-    //         .catch((error) => {
-    //             console.log("catch =   ");
-    //             callback(-1, null);
-    //         });
-    // })
 
 }
 orderDetailUtils.insertOrder = function (email, card_template_id, card_name, card_quantity, unit_price, card_template_url, customized_card_url,

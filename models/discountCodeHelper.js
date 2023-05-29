@@ -8,6 +8,15 @@ function discountCodeHelper() {
 }
 module.exports = discountCodeHelper;
 
+discountCodeHelper.createRechargeCode = function(codeModel,callback){
+    var loginInsert = "INSERT INTO discountCode SET email='" + codeModel.email + "' ,discountCode='" + codeModel.discountCode + "', buyCount='" + codeModel.buyCount + "', status='" + 0 + "', createTime='" + codeModel.createTime + "',payMonney = '"+codeModel.payMonney+"';";
+    db.query(loginInsert,function(err,rows,fields){
+        if (err) {
+            return callback(0,err);
+        } //用户卡号没有在系统中存在
+        return callback(20000,"");
+    })
+};
 discountCodeHelper.selectPersonalInfo = function (email,discountCode,callback) {
 //status  = -1  没有注册;
     console.log('select discountCheck');
@@ -24,3 +33,22 @@ discountCodeHelper.selectPersonalInfo = function (email,discountCode,callback) {
         }
     });
 };
+
+
+
+discountCodeHelper.selectAllCount = function (callback) {
+    //status  = -1  没有注册;
+        console.log('select discountCheck');
+        var manager_add_user =  "select * from discountCode;";
+        db.query(manager_add_user, function (err, rows, fields) {
+            console.log(err);
+            if (err) {
+                return callback(0,rows,err,messageModel.public_server_error);
+            } //用户卡号没有在系统中存在
+            if (rows.length == 0){
+                return callback(2,err);
+            }else{
+                return callback(1,rows);
+            }
+        });
+    };

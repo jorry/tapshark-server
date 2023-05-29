@@ -19,17 +19,16 @@ async function sendEmail(email,userName) {
     var smtpTransport = nodemailer.createTransport({
         host: 'owa.finupgroup.com',
         post: '587',
-        ecure: false,
         auth: {
             user: 'liujiawei@iqianjin.com',
-            pass: 'qqqqqqq1.'
+            pass: 'qqqqqqqq1.'
         }
     });
     var token = generateResetToken();
     const htmlTemplate = fs.readFileSync('./transfer_email.html', 'utf8');
     var resetToken = "resetToken=" + token;
     console.log("userName = "+userName);
-    var resetPasswordUrl = "http://47.92.215.156/ECard/forget.html?resetToken=" + resetToken + "&email=" + email + "";
+    var resetPasswordUrl = "http://47.92.215.156/ECard6/reset.html?resetToken=" + resetToken + "&email=" + email + "";
     const emailBody = htmlTemplate.replace('{{username}}', userName).replaceAll("{{resetLink}}", resetPasswordUrl);
     console.log(emailBody)
     var mailOptions = {

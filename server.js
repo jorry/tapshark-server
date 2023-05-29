@@ -11,6 +11,8 @@ var bodyParser = require('body-parser');
 var httptet = require('./models/httptet');
 var checkAuth = require('./models/checkAuth');
 var checkAuthCookieArray = require('./models/checkAuthCookieArray');
+const { v4: uuidv4 } = require('uuid');
+var cardmanagerHelper = require('./models/cardmanagerHelper');
 
 var cryptoUtilsHelper = require('./models/cryptoUtils');
 var messageModel = require('./config/message');
@@ -420,7 +422,7 @@ app.post("/ecard/upload/img", function (req, res) {
     });
 });
 
-app.post('/addUserOrder', function (req, res) {
+app.post('/addUserOrder', checkAuth,function (req, res) {
     var createDate = new Date().getTime();
     var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
     orderDetailUtils.insertOrder("ex@gmail.com", 1, "red tree", 4, "0", "http://card_template_url", "http://customized_card_url",
@@ -443,7 +445,7 @@ app.post('/addUserOrder', function (req, res) {
 /**
  * 用户主卡页
  */
-app.post('/ecard/userMainCardPage', function (req, res) {
+app.post('/ecard/userMainCardPage',checkAuth, function (req, res) {
     var email = req.body.body.email;
 
     mainCard.selectUserCard(email, function (status, rows) {
@@ -470,7 +472,7 @@ app.post('/ecard/userMainCardPage', function (req, res) {
 });
 
 
-app.post('/ecard/orderUpload', function (req, res) {
+app.post('/ecard/orderUpload', checkAuth,function (req, res) {
     
     var createDate = new Date().getTime();
     var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
@@ -481,9 +483,10 @@ app.post('/ecard/orderUpload', function (req, res) {
         email: cryptoUtilsHelper.decryptCookie(cookieValue),
         payment_code: req.body.body.orderInfo.purchase_code,
         shipping_address_id: 0,
+        creatTime:eventtime,
         order_id: 0
     }
-    console.log('font_color = '+eq.body.body.cards.font_color)
+    console.log('font_color = '+req.body.body.cards.font_color)
     const cards = {
         card_name: req.body.body.cards.card_name,
         company_logo: req.body.body.cards.company_logo,
@@ -492,6 +495,8 @@ app.post('/ecard/orderUpload', function (req, res) {
         buy_count: req.body.body.cards.buy_count,
         qr_logo: req.body.body.cards.qr_logo,
         font_color : req.body.body.cards.font_color,
+        creatTime:eventtime,
+        email: cryptoUtilsHelper.decryptCookie(cookieValue),
         card_id: 0,
 
     }
@@ -520,7 +525,7 @@ app.post('/ecard/orderUpload', function (req, res) {
         return res.send(JSON.stringify(obj));
     });
 });
-app.post('/ecard/selectCardPersonalInfo', function (req, res) {
+app.post('/ecard/selectCardPersonalInfo',checkAuth, function (req, res) {
     const card_num = req.body.body.card_num;
     personalInfoHelper.selectPersonalInfo(card_num, function (status, err, rows) {
         if (err != null) {
@@ -544,7 +549,7 @@ app.post('/ecard/selectCardPersonalInfo', function (req, res) {
     })
 });
 
-app.post('/ecard/addCardPersonalInfo', function (req, res) {
+app.post('/ecard/addCardPersonalInfo',checkAuth, function (req, res) {
     const personal = {
         card_num: req.body.body.card_num,
         photo_url: req.body.body.photo_url,
@@ -578,17 +583,15 @@ app.post('/ecard/addCardPersonalInfo', function (req, res) {
  * NFC 扫码尽量，如果用户在已经注册过并且卡有信息,返回卡信息
  *             如果用户在已经注册过并且没有卡信息,返回卡信息
  */
-app.get('/ecard/nfc', function (req, res) {
+app.post('/ecard/nfc', function (req, res) {
     console.log('/ecard/nfc');
-
-
-    const email = req.query.email;
-    console.log(email);
-    const card_num = req.query.card_num;
+    const userId = req.body.body.userId;
+    console.log(userId);
+    const card_num = req.body.body.card_num;
     console.log(card_num);
     var nfcStatusCode = 0;
     var msg;
-    nfcHelper.selectRegister(email, card_num, function (status, callRow, error, message) {
+    nfcHelper.selectRegister(userId, card_num, function (status, callRow, error, message) {
 
         console.log('nfcHelper.selectRegister = ' + message)
         if (error != null) {
@@ -605,29 +608,29 @@ app.get('/ecard/nfc', function (req, res) {
         } else if (status == 9) {
             nfcStatusCode = messageModel.NFC_empty_card_code;
             msg = messageModel.NFC_empty_card;
-            // const cookieOptions = {
-            //     maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-            //     httpOnly: true, // 禁止客户端脚本访问 Cookie
-            //     signed: true, // 启用签名
-            //     sameSite: 'strict', // 防止跨站点请求伪造攻击
-            //     secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-            // };
-            // let session_id = cryptoUtilsHelper.encrypt(email);
-            // res.cookie('session_id', session_id, cookieOptions);
-            // checkAuth.checkCookieObjArray.push(session_id);
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(userId);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuthCookieArray.checkCookieObjArray.push(session_id);
         } else if (status == 10) {
-            nfcStatusCode = messageModel.NFC_display_card;
-            msg = messageModel.NFC_display_card_code;
-            // const cookieOptions = {
-            //     maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-            //     httpOnly: true, // 禁止客户端脚本访问 Cookie
-            //     signed: true, // 启用签名
-            //     sameSite: 'strict', // 防止跨站点请求伪造攻击
-            //     secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-            // };
-            // let session_id = cryptoUtilsHelper.encrypt(email);
-            // res.cookie('session_id', session_id, cookieOptions);
-            // checkAuth.checkCookieObjArray.push(session_id);
+            nfcStatusCode = messageModel.NFC_display_card_code;
+            msg =  messageModel.NFC_display_card;
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(userId);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuthCookieArray.checkCookieObjArray.push(session_id);
         }
         var obj = new response();
         obj.code = nfcStatusCode;
@@ -637,12 +640,68 @@ app.get('/ecard/nfc', function (req, res) {
 
 });
 
+//------管理后台
+app.get('/cardManager/cards', function (req, res) {
+    cardmanagerHelper.selectCards(function(status,rows){
+        var obj = new response();
+        obj.code = status;
+        obj.body = rows;
+        return res.end(JSON.stringify(obj));
+    })
+});
+
+function generateUniqueString() {
+    const uuid = uuidv4().toUpperCase();
+    const formattedString = uuid.replace(/-/g, '').replace(/(.{4})/g, '$1-').slice(0, -1);
+    return formattedString;
+  }
+
+app.post('/cardmanager/createRechargeCode', function (req, res) {
+    const v = generateUniqueString();
+    var createDate = new Date().getTime();
+    var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
+    const chargeModel = {
+        email: req.body.email,
+        payMonney: req.body.payMonney,
+        buyCount: req.body.region,
+        discountCode:v,
+        createTime:eventtime
+    };
+
+    discountHelper.createRechargeCode(chargeModel,function(status,error){
+        var obj = new response();
+        obj.code = status;
+        if(status === 20000){
+            obj.body = chargeModel.discountCode;
+        }
+        return res.end(JSON.stringify(obj));
+    })
+});
+
+app.get('/cardmanager/getCreateCardList/list', function (req, res) {
+    orderDetailUtils.cardmanagerSelect(function(status,rows){
+        var obj = new response();
+        obj.code = status;
+        obj.body = rows;
+        return res.end(JSON.stringify(obj));
+    })
+});
+
+app.get('/cardmanager/rechargeCode/list', function (req, res) {
+    discountHelper.selectAllCount(function(status,rows){
+        var obj = new response();
+        obj.code = status;
+        obj.body = rows;
+        return res.end(JSON.stringify(obj));
+    })
+});
+
 
 function toJSON(data, message, code) {
     return JSON.stringify(data, message, code);
 }
 
-var port = normalizePort(process.env.PORT_S || '30008');
+var port = normalizePort(process.env.PORT_S || '30007');
 http.createServer(app).listen(port);
 
 /**

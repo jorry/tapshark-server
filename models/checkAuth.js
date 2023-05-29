@@ -27,12 +27,12 @@ function callBackErrorAlertMessage(res,msg) {
 
 // 中间件函数
 const checkAuth = (req, res, next) => {
-    const sessionId = req.signedCookies['session_id'];
+    const sessionId = req.body.body.session_id;
     console.log('认证:先检测cookie'+sessionId)
 
     if (!sessionId) {
         // 如果session_id不存在，返回401状态码
-        callBackErrorAlertMessage(res,'如果session_id不存在');
+        callBackErrorAlertMessage(res,'please login first');
         return;
     }
     const cookieData = cryptoUtilsHelper.decryptCookie(sessionId);
@@ -40,10 +40,9 @@ const checkAuth = (req, res, next) => {
     // 如果session_id存在，尝试解密cookie
     if (!cookieData) {
         // 如果cookie无效，返回401状态码
-        callBackErrorAlertMessage(res,'如果cookie无效，返回401状态码');
+        callBackErrorAlertMessage(res,'please login first');
         return;
     }
-
 
     console.log("cookieData" + cookieData);
     console.log('find.......'+(checkCookieObjArrayHelper.checkCookieObjArray.includes(sessionId)))
@@ -53,7 +52,16 @@ const checkAuth = (req, res, next) => {
         req.userData = cookieData;
         next();
     } else {
-        callBackErrorAlertMessage(res,'没有找到');
+        loginHelper.checkEmail(sessionId,function(status,error){
+            console.log('checkAuth 56行'+status)
+            if(status == 1){
+                checkCookieObjArrayHelper.checkCookieObjArray.push(sessionId)
+                next();
+            }else{
+                callBackErrorAlertMessage(res,'please login first');
+            }
+        })
+        
     }
 };
 
