@@ -43,7 +43,7 @@ app.use(cors({
       credentials: true
 }));
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'http://tapshark.co'); // 替换为允许的客户端域名
+    res.header('Access-Control-Allow-Origin', 'http://47.92.215.156'); // 替换为允许的客户端域名
     res.header('Access-Control-Allow-Credentials', 'true'); // 允许携带凭据
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE'); // 允许的请求方法
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'); // 允许的请求头
@@ -60,19 +60,7 @@ var response = function () {
     this.body;
 };
 
-function saveCookie(res,req,email){
-  const cookieOptions = {
-        maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-        httpOnly: false, // 禁止客户端脚本访问 Cookie
-        signed: false, // 启用签名
-        sameSite: 'strict', // 防止跨站点请求伪造攻击
-        secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-    };
-    let session_id = cryptoUtilsHelper.encrypt(email);
-console.log("save-session_id = "+session_id);
-    res.cookie('session_id', session_id, cookieOptions);
-    checkAuthCookieArray.checkCookieObjArray.push(session_id);
-}
+
 
 
 function publicServerError(res) {
@@ -95,7 +83,7 @@ function responseUploadImgUrlBody(url) {
     return o;
 };
 
-app.post('/getC', function (req, res) {
+app.get('/getC', function (req, res) {
 
     var obj = new response();
     obj.code = 1;
@@ -104,15 +92,14 @@ app.post('/getC', function (req, res) {
 });
 
 
-app.post('/saveC', function (req, res) {
-    var email = "156224301.com";
-
+app.get('/saveC', function (req, res) {
+    var email = "333333333333333333333333@111.com";
     const cookieOptions = {
         maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
         httpOnly: false, // 禁止客户端脚本访问 Cookie
         signed: false, // 启用签名
-        //sameSite: 'strict', // 防止跨站点请求伪造攻击
-       // secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+        sameSite: 'strict', // 防止跨站点请求伪造攻击
+        secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
     };
     let session_id = cryptoUtilsHelper.encrypt(email);
 
@@ -120,7 +107,7 @@ app.post('/saveC', function (req, res) {
     checkAuthCookieArray.checkCookieObjArray.push(session_id);
     var obj = new response();
     obj.code = 1;
-    obj.msg = req.cookies.session_id;
+    obj.msg = req.cookies.length;
     return res.end(JSON.stringify(obj));
 });
 
@@ -151,11 +138,20 @@ app.post('/ecard/userLogin', function (req, res) {
             return publicServerError(res);
         }
         if (status === 1) {
-            saveCookie(res,req,email)
-//            checkAuthCookieArray.checkCookieObjArray.push(session_id);
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: false, // 禁止客户端脚本访问 Cookie
+                signed: false, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(email);
+            console.log('登录后 设置sesstion = '+session_id);
+             res.cookie('session_id', session_id, cookieOptions);
+            checkAuthCookieArray.checkCookieObjArray.push(session_id);
         }
         var obj = new response();
-	        obj.code = status;;
+	        obj.code = status;
         obj.msg = status == 0 ? messageModel.login_call_back : "登录成功";
         return res.end(JSON.stringify(obj));
     });
@@ -261,9 +257,9 @@ app.post('/ecard/resetPassword', function (req, res) {
  * 这个接口好像没啥用
  */
 app.post('/ecard/checkDiscountCode', function (req, res) {
-    var email = req.body.email;
-    var discountCode = req.body.discountCode;
-    discountHelper.checkDiscountCode(email, discountCode, function (status, error, message) {
+    var email = req.body.body.email;
+    var discountCode = req.body.body.discountCode;
+    discountHelper.discountCheck(email, discountCode, function (status, error, message) {
         if (error) {
             return publicServerError(res);
         }
@@ -432,7 +428,7 @@ app.post("/ecard/upload/img", function (req, res) {
         const data = fs.readFileSync(filePath);
         console.log('大小:', data.length);
 
-        let rootPath = path.resolve(__dirname, '../../default'); //代码文件的根路径
+        let rootPath = path.resolve(__dirname, '../default'); //代码文件的根路径
         // 将读取文件保存到新的位置
         fs.writeFile(
             path.join(rootPath, '/file/') + name,
@@ -478,7 +474,7 @@ app.post('/addUserOrder', checkAuth,function (req, res) {
 /**
  * 用户主卡页
  */
-app.post('/ecard/userMainCardPage',checkAuth, function (req, res) {
+app.post('/ecard/userMainCardPage', function (req, res) {
     var email = req.body.body.email;
 	printCookie(req);
    const sessionId = req.body.body.session_id;  
@@ -668,21 +664,10 @@ app.post('/ecard/addCardPersonalInfo',checkAuth, function (req, res) {
  */
 app.post('/ecard/nfc', function (req, res) {
     console.log('/ecard/nfc');
-   const userId = req.body.body.userId; 
-		//cryptoUtilsHelper.decryptCookie(req.body.body.userId);
-    //console.log(userId);
+    const userId = req.body.body.userId;
+    console.log(userId);
     const card_num = req.body.body.card_num;
-		//cryptoUtilsHelper.decryptCookie(req.body.body.card_num);
-   // console.log(card_num);
-   // const userId = req.body.body.userId;
-   // console.log(userId);
-   // const card_num = req.body.body.card_num;
-   // console.log(card_num);
-  // const userId =  cryptoUtilsHelper.decryptCookie(req.body.body.userId);
-    //console.log(userId);
-    //const card_num = cryptoUtilsHelper.decryptCookie(''+req.body.body.card_num);
-    //console.log(card_num);
-
+    console.log(card_num);
     var nfcStatusCode = 0;
     var msg;
     nfcHelper.selectRegister(userId, card_num, function (status, callRow, error, message) {
@@ -700,36 +685,32 @@ app.post('/ecard/nfc', function (req, res) {
             nfcStatusCode = messageModel.NFC_no_register_code;
             msg = messageModel.NFC_no_register;
         } else if (status == 9) {
-           // nfcStatusCode = messageModel.NFC_empty_card_code;
-           // msg = messageModel.NFC_empty_card;
-           // const cookieOptions = {
-          //      maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-          //      httpOnly: true, // 禁止客户端脚本访问 Cookie
-           //     signed: true, // 启用签名
-           //     sameSite: 'strict', // 防止跨站点请求伪造攻击
-           //     secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-           // };
-           // let session_id = cryptoUtilsHelper.encrypt(userId);
-           // res.cookie('session_id', session_id, cookieOptions);
-           // checkAuthCookieArray.checkCookieObjArray.push(session_id);
-        saveCookie(res,req,userId);
-	} else if (status == 10) {
+            nfcStatusCode = messageModel.NFC_empty_card_code;
+            msg = messageModel.NFC_empty_card;
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(userId);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuthCookieArray.checkCookieObjArray.push(session_id);
+        } else if (status == 10) {
             nfcStatusCode = messageModel.NFC_display_card_code;
             msg =  messageModel.NFC_display_card;
-           // const cookieOptions = {
-             //   maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
-               // httpOnly: true, // 禁止客户端脚本访问 Cookie
-                //signed: true, // 启用签名
-                //sameSite: 'strict', // 防止跨站点请求伪造攻击
-                //secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
-           // };
-           // let session_id = cryptoUtilsHelper.encrypt(userId);
-           // res.cookie('session_id', session_id, cookieOptions);
-           // checkAuthCookieArray.checkCookieObjArray.push(session_id);
-        
-		 saveCookie(res,req,userId);
-	}
-	    console.log('NFC 返回的数据是'+JSON.stringify(obj));
+            const cookieOptions = {
+                maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
+                httpOnly: true, // 禁止客户端脚本访问 Cookie
+                signed: true, // 启用签名
+                sameSite: 'strict', // 防止跨站点请求伪造攻击
+                secure: process.env.NODE_ENV === 'production', // 仅在 HTTPS 连接中使用 Cookie
+            };
+            let session_id = cryptoUtilsHelper.encrypt(userId);
+            res.cookie('session_id', session_id, cookieOptions);
+            checkAuthCookieArray.checkCookieObjArray.push(session_id);
+        }
         var obj = new response();
         obj.code = nfcStatusCode;
         obj.msg = msg;
@@ -812,7 +793,7 @@ app.post('/cardmanager/getCardDetailByOrderId', function (req, res) {
 function createCardLink(rows){
     const cardLinks = [];
     for (let i = 0; i < rows.length; i++){
-        let link = 'http://tapshark.co/tapShark/nfcChecked.html?'+'userId='+rows[i].email+'cardNum='+rows[i].card_num;
+        let link = 'http://tapshark.co/tapShark/index.html?'+'userId='+rows[i].email+'cardNum='+rows[i].card_num;
         cardLinks.push({link});
     }
     return cardLinks;
@@ -822,7 +803,7 @@ function toJSON(data, message, code) {
     return JSON.stringify(data, message, code);
 }
 
-var port = normalizePort(process.env.PORT_S || '3001');
+var port = normalizePort(process.env.PORT_S || '30011');
 http.createServer(app).listen(port);
 
 /**
