@@ -21,6 +21,21 @@ function query(sql) {
     });
 }
 
+orderDetailUtils.getCardDetailByOrderId = async function(order_id,callback){
+    var descGetCardId = "select o.email,a.*,c.* from orders o Left join shipping_address a ON o.shipping_address_id = a.address_id Left join order_cards oc ON oc.order_id = o.order_id Left join cards c ON c.card_id = oc.card_id where o.order_id = '"+order_id+"';";
+    query(descGetCardId)
+        .then((results) => {
+            return results;
+        })
+        .then((results) => {
+            callback(20000, results);
+        })
+        .catch((error) => {
+            callback(-1, null);
+        });
+}
+
+
 orderDetailUtils.cardmanagerSelect = async function(callback){
     var descGetCardId = "SELECT email,created_at,card_count,status,order_id FROM orders ;";
     query(descGetCardId)
