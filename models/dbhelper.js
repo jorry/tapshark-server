@@ -10,8 +10,7 @@ const pool = mysql.createPool({
     port : config.db_port,
     user : config.username,
     password : config.password,
-    database : config.db_name,
-    connectTimeout: 10000 // 20 seconds
+    database : config.db_name
 });
 
 var DB = {};
@@ -22,7 +21,6 @@ module.exports = DB;
 DB.query=function(sql,callback){
     console.log(sql);
     pool.getConnection(function(err,conn){
-        console.log('query .err = '+err);
         if(err){
             callback(err,null,null);
         }else{
@@ -39,10 +37,8 @@ DB.query=function(sql,callback){
 DB.beginTransaction=function(callback){
     pool.getConnection(function(err,connection){
         if(err){
-            console.log('beginTransaction  .err= '+err);
             callback(err,null,null);
         }
-        console.error('beginTransaction .成功 = : ' + err);
         callback(connection);
     });
 };
@@ -52,7 +48,6 @@ DB.query_object=function(sql,obj,callback){
     console.log(sql,obj);
     pool.getConnection(function(err,conn){
         if(err){
-            console.log('query_object  .err= '+err);
             callback(err,null,null);
         }else{
             console.log("进来了吗")
@@ -67,7 +62,6 @@ DB.query_object=function(sql,obj,callback){
 };
 DB.connect = function (callback){
     return pool.getConnection(function (err,conn){
-        console.log('connect  .err= '+err);
         callback(conn);
     });
 }
@@ -76,9 +70,8 @@ DB.getConnection=function(callback){
     var connection=mysql.createConnection(pool);
     connection.connect(function(err){
         if(err){
-            console.error('getConnection .err = : ' + err.stack);
+            console.error('error connecting: ' + err.stack);
         }
-        console.error('getConnection .成功 = : ' + err);
         callback(err,connection);
     });
 }
