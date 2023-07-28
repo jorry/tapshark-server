@@ -19,7 +19,7 @@
   },
   "scripts": {
     "dev": "node ./bin/www",
-    "start": "export NODE_ENV=production&& pm2 stop e-card-v1-1-server && pm2 start server.js --name e-1-1-card-server",
+    "start": "export NODE_ENV=production&& pm2 stop e-card-v1-1-server && pm2 start server.js --name e-card-v1-1-server",
     "test": "export NODE_ENV=dev&& pm2 stop e-card-server && pm2 start server.js --name e-card-server"
   },
   "author": "",

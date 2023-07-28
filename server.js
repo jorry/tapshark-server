@@ -260,15 +260,16 @@ app.post('/ecard/resetPassword', function (req, res) {
 /**
  * 这个接口好像没啥用
  */
-app.post('/ecard/checkDiscountCode', function (req, res) {
+app.post('/ecard/checkDiscountCode',function (req, res) {
     var email = req.body.email;
-    var discountCode = req.body.discountCode;
+    var discountCode = req.body.purchase_code;
     discountHelper.checkDiscountCode(email, discountCode, function (status, error, message) {
         if (error) {
             return publicServerError(res);
         }
         var obj = new response();
         obj.code = status;
+        obj.buyCount = message;
         obj.msg = message;
         return res.end(JSON.stringify(obj));
     });
@@ -432,7 +433,7 @@ app.post("/ecard/upload/img", function (req, res) {
         const data = fs.readFileSync(filePath);
         console.log('大小:', data.length);
 
-        let rootPath = path.resolve(__dirname, '../../default'); //代码文件的根路径
+        let rootPath = path.resolve(__dirname, '../../'); //代码文件的根路径
         // 将读取文件保存到新的位置
         fs.writeFile(
             path.join(rootPath, '/file/') + name,

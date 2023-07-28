@@ -47,7 +47,14 @@ discountCodeHelper.checkDiscountCode = function (email,discountCode,callback) {
             if (rows.length == 0){
                 return callback(0,err,messageModel.Invalid_discount_code);
             }else{
-                return callback(1,err,"找到折扣码,折扣码有效");
+                console.log('buyCount-------> = '+rows[0].buyCount);
+                if(rows[0].buyCount > 0){
+                    console.log('buyCount-------> = ok');
+                    return callback(1,err,rows[0].buyCount);
+                }else{
+                    cconsole.log('buyCount-------> = rows[0].buyCount == 0');
+                    return callback(0,err,messageModel.buyRechargeCodeIsHave);
+                }
             }
         });
     };
