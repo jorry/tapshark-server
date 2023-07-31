@@ -1,5 +1,6 @@
 var db = require('./dbhelper');
 var dbv2 = require('./dbhelper_v2');
+var messageModel = require('../config/message');
 const { v4: uuidv4 } = require('uuid');
 function orderDetailUtils() {
 }
@@ -49,56 +50,6 @@ orderDetailUtils.cardmanagerSelect = async function(callback){
             callback(-1, null);
         });
 }
-
-// orderDetailUtils.checkTest = async function (email,payment_code,buy_count,callback){
-//     await dbv2.executeTransaction(async (connection) => {
-//         console.log("-----connection--"+connection);
-//         if (connection == null){
-//             callback(-100,"稍后重试");
-//             return;
-//         }
-                                      
-//         const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? ', [email, payment_code]);
-//         console.log('result.length = '+result.length);
-//         console.log('status = '+result[0].status);
-//         console.log('buy_count = '+result[0].buyCount);
-        
-//         if (result.length > 0 && result[0].status == 0 && result[0].buyCount >= buy_count){
-//             console.log('--------ok');
-//         }else{
-//             console.log('--------error');
-//         }
-//     });
-// }
-
-// async function update(connection,email,payment_code,buy_count){
-//     const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? ', [email, payment_code]);
-//     console.log('result.length = '+result.length);
-//     console.log('status = '+result[0].status);
-//     console.log('buy_count = '+result[0].buyCount);
-//     const rowsResutlBuyCount = result[0].buyCount;
-//     if (result.length > 0 && result[0].status == 0 && rowsResutlBuyCount >= buy_count){
-//         console.log('--------ok');
-//         if(rowsResutlBuyCount - buy_count >= 1 ){
-//             console.log('--------减');
-//             await connection.query('UPDATE discountCode SET buyCount = ?  WHERE discountCode = ?', [rowsResutlBuyCount - buy_count,payment_code]);
-//         }else{
-//             console.log('-------重置1');
-//             await connection.query('UPDATE discountCode SET status = ? , buyCount = ? WHERE discountCode = ?', ['1',0,payment_code]);
-//         }
-       
-//     }else{
-//         console.log('--------error');
-//     }
-// }
-
-// orderDetailUtils.updateCount = async function(email,payment_code,buy_count,callback){
-//     await dbv2.executeTransaction(async (connection) => {
-//         update(connection,email,payment_code,buy_count);
-//         console.log('--------callback');
-//         callback();
-//     });
-// }
 
 orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback) {
 //    // var checkDiscountCode = "select * from discountCode where email = '" + orders.email + "' and discountCode = '" + orders.payment_code + "' and buyCount = " + cards.buy_count + ";";
@@ -198,14 +149,14 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
                 await connection.query('UPDATE discountCode SET status = ? , buyCount = ? WHERE discountCode = ?', ['1',0,orders.payment_code]);
             }
 
-            callback(1, '提交成功');
+            callback(1, messageModel.submit);
         } else {
             if (result.length > 0) {
                 console.log("0 未使用，1 使用 = " + result[0].status)
-                callback(-1, '已使用');
+                callback(-1, messageModel.Not_enough_cards_left);
             }else{
                 console.log(result.length + "支付码无效")
-                callback(-1, '支付码无效');
+                callback(-1, messageModel.Not_enough_cards_left);
             }
 
         }

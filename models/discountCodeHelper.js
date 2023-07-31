@@ -29,7 +29,7 @@ discountCodeHelper.selectPersonalInfo = function (email,discountCode,callback) {
         if (rows.length == 0){
             return callback(2,err,messageModel.Invalid_discount_code);
         }else{
-            return callback(1,err,"找到折扣码,折扣码有效");
+            return callback(1,err,'ok');
         }
     });
 };

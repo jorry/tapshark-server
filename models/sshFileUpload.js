@@ -5,7 +5,6 @@ var node_ssh = require('node-ssh');
 
 var shelljs = require('shelljs');;
 var ftpUtils = require('./sftpUtil');
-
 var ssh = new node_ssh();
 
 
