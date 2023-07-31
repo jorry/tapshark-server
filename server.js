@@ -723,7 +723,7 @@ app.post('/ecard/nfc', function (req, res) {
            // let session_id = cryptoUtilsHelper.encrypt(userId);
            // res.cookie('session_id', session_id, cookieOptions);
            // checkAuthCookieArray.checkCookieObjArray.push(session_id);
-        saveCookie(res,req,userId);
+        // saveCookie(res,req,userId);
 	} else if (status == 10) {
             nfcStatusCode = messageModel.NFC_display_card_code;
             msg =  messageModel.NFC_display_card;
@@ -738,7 +738,7 @@ app.post('/ecard/nfc', function (req, res) {
            // res.cookie('session_id', session_id, cookieOptions);
            // checkAuthCookieArray.checkCookieObjArray.push(session_id);
         
-		 saveCookie(res,req,userId);
+		//  saveCookie(res,req,userId);
 	}
 	    console.log('NFC 返回的数据是'+JSON.stringify(obj));
         var obj = new response();
