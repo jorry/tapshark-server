@@ -50,6 +50,55 @@ orderDetailUtils.cardmanagerSelect = async function(callback){
         });
 }
 
+// orderDetailUtils.checkTest = async function (email,payment_code,buy_count,callback){
+//     await dbv2.executeTransaction(async (connection) => {
+//         console.log("-----connection--"+connection);
+//         if (connection == null){
+//             callback(-100,"稍后重试");
+//             return;
+//         }
+                                      
+//         const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? ', [email, payment_code]);
+//         console.log('result.length = '+result.length);
+//         console.log('status = '+result[0].status);
+//         console.log('buy_count = '+result[0].buyCount);
+        
+//         if (result.length > 0 && result[0].status == 0 && result[0].buyCount >= buy_count){
+//             console.log('--------ok');
+//         }else{
+//             console.log('--------error');
+//         }
+//     });
+// }
+
+// async function update(connection,email,payment_code,buy_count){
+//     const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? ', [email, payment_code]);
+//     console.log('result.length = '+result.length);
+//     console.log('status = '+result[0].status);
+//     console.log('buy_count = '+result[0].buyCount);
+//     const rowsResutlBuyCount = result[0].buyCount;
+//     if (result.length > 0 && result[0].status == 0 && rowsResutlBuyCount >= buy_count){
+//         console.log('--------ok');
+//         if(rowsResutlBuyCount - buy_count >= 1 ){
+//             console.log('--------减');
+//             await connection.query('UPDATE discountCode SET buyCount = ?  WHERE discountCode = ?', [rowsResutlBuyCount - buy_count,payment_code]);
+//         }else{
+//             console.log('-------重置1');
+//             await connection.query('UPDATE discountCode SET status = ? , buyCount = ? WHERE discountCode = ?', ['1',0,payment_code]);
+//         }
+       
+//     }else{
+//         console.log('--------error');
+//     }
+// }
+
+// orderDetailUtils.updateCount = async function(email,payment_code,buy_count,callback){
+//     await dbv2.executeTransaction(async (connection) => {
+//         update(connection,email,payment_code,buy_count);
+//         console.log('--------callback');
+//         callback();
+//     });
+// }
 
 orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback) {
 //    // var checkDiscountCode = "select * from discountCode where email = '" + orders.email + "' and discountCode = '" + orders.payment_code + "' and buyCount = " + cards.buy_count + ";";
@@ -61,8 +110,9 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
         }
         console.log('验证支付码:'+orders.email, orders.payment_code, cards.buy_count);
         //                                      '
-        const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? AND buyCount = ? ', [orders.email, orders.payment_code, cards.buy_count]);
-        if (result.length > 0 && result[0].status == 0) {
+        const [result] = await connection.query('select * from discountCode where email = ? AND discountCode = ? ', [orders.email, orders.payment_code]);
+        const rowsResutlBuyCount = result[0].buyCount;
+        if (result.length > 0 && result[0].status == 0 && rowsResutlBuyCount >= cards.buy_count) {
             console.log("支付码有效" + result[0])
             const [addressResult] = await connection.query('INSERT INTO shipping_address(first_name,last_name,company,full_address,address_line,city,state,zip_code,phone_number,vat,email,country) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)',
                 [address.first_name,
@@ -138,7 +188,16 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
                 await connection.query('INSERT INTO order_cards (order_id, card_id) VALUES (?, ?)', [orders.order_id , result3.insertId]);
             }
             //订单提交后，重置支付码状态
-            await connection.query('UPDATE discountCode SET status = ? WHERE discountCode = ?', ['1',orders.payment_code]);
+            // await connection.query('UPDATE discountCode SET status = ? WHERE discountCode = ?', ['1',orders.payment_code]);
+            
+            if(rowsResutlBuyCount - cards.buy_count >= 1 ){
+                console.log('--------减');
+                await connection.query('UPDATE discountCode SET buyCount = ?  WHERE discountCode = ?', [rowsResutlBuyCount - cards.buy_count,orders.payment_code]);
+            }else{
+                console.log('-------重置1');
+                await connection.query('UPDATE discountCode SET status = ? , buyCount = ? WHERE discountCode = ?', ['1',0,orders.payment_code]);
+            }
+
             callback(1, '提交成功');
         } else {
             if (result.length > 0) {

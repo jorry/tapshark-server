@@ -507,8 +507,18 @@ console.log('------email='+email+'  sessionId = '+sessionId);
     });
 });
 
+app.get('/ecard/testOrder',function(req,res){
 
-app.post('/ecard/orderUpload', checkAuth,function (req, res) {
+    orderDetailUtils.updateCount('840601413@qq.com','7DAE-0E8C-4834-4645-8C05-CE14-8651-506F',1,function(){
+        var obj = new response();
+        obj.code = 1;
+        obj.msg = "ok";
+        return res.end(JSON.stringify(obj));
+    });
+    
+})
+
+app.post('/ecard/orderUpload',function (req, res) {
     
     var createDate = new Date().getTime();
     var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
@@ -516,7 +526,7 @@ app.post('/ecard/orderUpload', checkAuth,function (req, res) {
     console.log('cookieValue =  ?'+cookieValue);
     console.log('读取:session_id = '+cookieValue);
     const orders = {
-        email: cryptoUtilsHelper.decryptCookie(cookieValue),
+        email: cryptoUtilsHelper.decryptCookie(cookieValue), 
         payment_code: req.body.body.orderInfo.purchase_code,
         shipping_address_id: 0,
         creatTime:eventtime,
