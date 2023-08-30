@@ -14,6 +14,7 @@ module.exports = personalInfoHelper;
 personalInfoHelper.selectPersonalInfo = function (card_num, callback) {
 //status  = -1  没有注册;
     console.log('select discountCheck');
+    // const personal_info = "select * from personal_info where card_num = '" + card_num + "' and email = '"+email+"';";
     const personal_info = "select * from personal_info where card_num = '" + card_num + "';";
     db.query(personal_info, function (err, rows, fields) {
         console.log(err);

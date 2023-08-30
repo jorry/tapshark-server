@@ -56,7 +56,7 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
     await dbv2.executeTransaction(async (connection) => {
         console.log("-----connection--"+connection);
         if (connection == null){
-            callback(-100,"稍后重试");
+            callback(-100,messageModel.waitting);
             return;
         }
         console.log('验证支付码:'+orders.email, orders.payment_code, cards.buy_count);

@@ -52,8 +52,8 @@ discountCodeHelper.checkDiscountCode = function (email,discountCode,callback) {
                     console.log('buyCount-------> = ok');
                     return callback(1,err,rows[0].buyCount);
                 }else{
-                    cconsole.log('buyCount-------> = rows[0].buyCount == 0');
-                    return callback(0,err,messageModel.buyRechargeCodeIsHave);
+                    console.log('buyCount-------> = rows[0].buyCount == 0'+messageModel.Invalid_discount_code);
+                    return callback(0,err,messageModel.Invalid_discount_code);
                 }
             }
         });

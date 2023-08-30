@@ -132,6 +132,21 @@ app.post('/testPost', function (req, res) {
     return res.end(JSON.stringify(obj));
 });
 
+app.post('/ecard/checkUser',function(req,res){
+    const email = cryptoUtilsHelper.encrypt(req.body.body.email);
+    const sessionId = req.body.body.sessionId;
+    console.log('/ecard/checkUser = '+email);
+    console.log('/ecard/checkUser = '+sessionId);
+    var obj = new response();
+    if(email === sessionId){
+        obj.code = 1;
+    }else{
+        obj.code = -1;
+    }
+    obj.msg = "ok";
+    console.log('/ecard/checkUser response = '+JSON.stringify(obj));
+    return res.end(JSON.stringify(obj));
+});
 
 app.post('/ecard/userLogin', function (req, res) {
     console.log("abc-------abc---login");
@@ -271,6 +286,7 @@ app.post('/ecard/checkDiscountCode',function (req, res) {
         obj.code = status;
         obj.buyCount = message;
         obj.msg = message;
+        console.log('/ecard/checkDiscountCode ->'+JSON.stringify(obj));
         return res.end(JSON.stringify(obj));
     });
 });
@@ -518,7 +534,7 @@ app.get('/ecard/testOrder',function(req,res){
     
 })
 
-app.post('/ecard/orderUpload',function (req, res) {
+app.post('/ecard/orderUpload',checkAuth,function (req, res) {
     
     var createDate = new Date().getTime();
     var eventtime = dateHelper.getFormatDateByLong(createDate, "yyyy-MM-dd hh:mm:ss");
@@ -547,6 +563,8 @@ app.post('/ecard/orderUpload',function (req, res) {
 
     }
 
+    console.log('card = '+cards.company_logo)
+
     console.log('req.body.body.country',req.body.body.shipping_address.country);
     const shipping_address = {
         first_name: req.body.body.shipping_address.first_name,
@@ -571,9 +589,10 @@ app.post('/ecard/orderUpload',function (req, res) {
         return res.send(JSON.stringify(obj));
     });
 });
-app.post('/ecard/selectCardPersonalInfo',checkAuth, function (req, res) {
+app.post('/ecard/selectCardPersonalInfo', function (req, res) {
     const card_num = req.body.body.card_num;
-    personalInfoHelper.selectPersonalInfo(card_num, function (status, err, rows) {
+    // const email = cryptoUtilsHelper.decryptCookie(req.body.body.session_id);
+    personalInfoHelper.selectPersonalInfo(card_num,function (status, err, rows) {
         if (err != null) {
             return publicServerError(res)
         }
@@ -698,6 +717,7 @@ app.post('/ecard/nfc', function (req, res) {
     var msg;
     nfcHelper.selectRegister(userId, card_num, function (status, callRow, error, message) {
 
+       
         console.log('nfcHelper.selectRegister = ' + message)
         if (error != null) {
             return publicServerError(res);
@@ -711,8 +731,8 @@ app.post('/ecard/nfc', function (req, res) {
             nfcStatusCode = messageModel.NFC_no_register_code;
             msg = messageModel.NFC_no_register;
         } else if (status == 9) {
-           // nfcStatusCode = messageModel.NFC_empty_card_code;
-           // msg = messageModel.NFC_empty_card;
+           nfcStatusCode = messageModel.NFC_empty_card_code;
+           msg = messageModel.NFC_empty_card;
            // const cookieOptions = {
           //      maxAge: 120 * 24 * 60 * 60 * 1000, // 120 天的有效期
           //      httpOnly: true, // 禁止客户端脚本访问 Cookie
@@ -740,10 +760,11 @@ app.post('/ecard/nfc', function (req, res) {
         
 		//  saveCookie(res,req,userId);
 	}
-	    console.log('NFC 返回的数据是'+JSON.stringify(obj));
+	   
         var obj = new response();
         obj.code = nfcStatusCode;
         obj.msg = msg;
+        console.log('NFC 返回的数据是'+JSON.stringify(obj));
         return res.end(JSON.stringify(obj));
     });
 

@@ -40,6 +40,7 @@ nfcLinkHelper.selectRegister = function (email,card_num,callback) {
                     return callback(-1,rows,err,messageModel.db_error);
                 }
                 if (rows.length == 0){
+                    console.log("这个啊 code = 9")
                     return callback(9,rows,err,messageModel.id_no_find);
                 }else {
                     return callback(10,rows,err,'ok');
