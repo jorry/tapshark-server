@@ -82,8 +82,8 @@ orderDetailUtils.PromiseUtil = async function (cards, orders, address, callback)
             orders.shipping_address_id = addressId;
 
             orders.order_id = uuidv4();
-            const [orderQueryResult] = await connection.query('INSERT INTO orders (order_id,email,shipping_address_id,payment_code,card_count,status) VALUES(?,?,?,?,?,?)', [orders.order_id,orders.email,orders.shipping_address_id,
-                orders.payment_code,cards.buy_count,'no']);
+            const [orderQueryResult] = await connection.query('INSERT INTO orders (order_id,email,shipping_address_id,payment_code,card_count,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)', [orders.order_id,orders.email,orders.shipping_address_id,
+                orders.payment_code,cards.buy_count,'no',orders.creatTime,orders.creatTime]);
             const orderId = orderQueryResult.insertId;
             console.log("-----------------------------------------------------");
             console.log("插入 订单表:"+JSON.stringify(orderQueryResult))
